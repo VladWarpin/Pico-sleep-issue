@@ -4,7 +4,10 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/SleepTest.unity
+    guid: 661492f4908b8c24488459fdff5aa5d1
   m_configObjects:
     Unity.XR.PXR.Settings: {fileID: 11400000, guid: a738df6b374ee9548b27fb0086246882, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: e5371f5b26defa844bf35a76d33c7295, type: 2}
