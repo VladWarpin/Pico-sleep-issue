@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections;
-using Unity.XR.PXR;
+﻿using Unity.XR.PXR;
 using UnityEngine;
-
 
 public static class DeviceManager
 {
-    private static bool picoSystemBound = false;
-
     /// <summary>
     /// Will set screen and sleep timeouts on pico device through pico plugin
     /// </summary>
@@ -19,8 +14,8 @@ public static class DeviceManager
 
 
         var sleepTimeOut = timeout == -1 ?
-            SleepDelayTimeEnum.NEVER :
-            SleepDelayTimeEnum.FIFTEEN; // minimum available value is 15 minutes
+             SleepDelayTimeEnum.NEVER :
+             SleepDelayTimeEnum.FIFTEEN; // minimum available value is 15 minutes
 
 
         var screenTimeOut = timeout < 0 ? ScreenOffDelayTimeEnum.NEVER :
@@ -31,8 +26,15 @@ public static class DeviceManager
                             timeout > 60 && timeout < 301 ? ScreenOffDelayTimeEnum.THREE_HUNDRED :
                               /*else*/                      ScreenOffDelayTimeEnum.SIX_HUNDRED;
 
-        CoroutineHelper.InitPicoSystem((result) =>
+        if (PicoSystemInitializer.Instance.IsInitialized)
+            SetScreenTimeout();
+        else
+            PicoSystemInitializer.Instance.OniIitialized += SetScreenTimeout;
+
+        void SetScreenTimeout()
         {
+            PicoSystemInitializer.Instance.OniIitialized -= SetScreenTimeout;
+
             string before = "(Before)";
             string after = "(After)";
 
@@ -42,84 +44,39 @@ public static class DeviceManager
             Debug.Log($"{before} Getting device sleep delay: {systemSleepDelay}");
             Debug.Log($"{before} Getting device screen off delay {systemsScreenOffDelay}");
 
-
             // print set values
             Debug.Log($"Setting device sleep delay to: {sleepTimeOut}");
             Debug.Log($"Setting device screen off delay to {screenTimeOut}");
 
-
-            // Setting screen timeout and sleep calues
+            // Setting screen timeout and sleep
             PXR_System.PropertySetSleepDelay(sleepTimeOut);
-            PXR_System.PropertySetScreenOffDelay(screenTimeOut, null);
-
+            PXR_System.PropertySetScreenOffDelay(screenTimeOut, ScreenSetCallback);
 
             // print get values (After)
             systemSleepDelay = PXR_System.GetSleepDelay();
             systemsScreenOffDelay = PXR_System.GetScreenOffDelay();
             Debug.Log($"{after} Getting device sleep delay: {systemSleepDelay}");
-            Debug.Log($"{after} Getting device screen off delay {systemsScreenOffDelay}");
-        });
-
-    }
-
-
-    #region Helper
-    public static class CoroutineHelper
-    {
-        public static IEnumerator InitPicoSystemCoroutine(Action<bool> result)
-        {
-            bool initResult = true;
-
-            try
-            {
-                if (picoSystemBound)
-                {
-                    PXR_System.UnBindSystemService();
-                    picoSystemBound = false;
-                }
-                PXR_System.InitSystemService(CoroutineManager.Instance.name);
-                PXR_System.BindSystemService();
-                picoSystemBound = true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("Init pico system service failed " + e);
-                initResult = false;
-            }
-            finally
-            {
-                string resultText = initResult ? "successful" : "unsuccessful";
-                Debug.Log($"Init pico system was {resultText}!");
-            }
-
-            // give it some time to init
-            yield return new WaitForSeconds(1f);
-            result?.Invoke(initResult);
+            Debug.Log($"{after} Getting device screen off delay {systemsScreenOffDelay}"); ;
         }
 
-        public static void InitPicoSystem(Action<bool> result) =>
-            CoroutineManager.Instance.StartCoroutine(InitPicoSystemCoroutine(result));
-    }
-    #endregion
-    #region Coroutine Manger
-    public class CoroutineManager : MonoBehaviour
-    {
-        private static CoroutineManager instance;
-
-        public static CoroutineManager Instance
+        void ScreenSetCallback(int i)
         {
-            get
+            string result = "";
+            switch (i)
             {
-                if (instance == null)
-                {
-                    GameObject container = new GameObject("CoroutineManager");
-                    instance = container.AddComponent<CoroutineManager>();
-                    DontDestroyOnLoad(container);
-                }
-
-                return instance;
+                case 0:
+                    result = "Successfully set";
+                    break;
+                case 1:
+                    result = "Failed to set";
+                    break;
+                case 10:
+                    result = "The screen off timeout should not be greater than the system sleep timeout";
+                    break;
+                default:
+                    break;
             }
+            Debug.Log("Screen set callback returned: " + result);
         }
     }
-    #endregion
 }
